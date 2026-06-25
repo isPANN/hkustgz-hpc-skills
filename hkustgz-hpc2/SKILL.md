@@ -13,7 +13,7 @@ Official docs: https://docs.hpc.hkust-gz.edu.cn/docs/hpc12/
 
 ## Rule: confirm every parameter before submitting
 
-When the user asks Claude to run something on this cluster, **list every `sbatch`/`srun` parameter and get explicit approval before invoking it.** No silent defaults — applies even on the free `debug` partition.
+When the user asks you to run something on this cluster, **list every `sbatch`/`srun` parameter and get explicit approval before invoking it.** No silent defaults — applies even on the free `debug` partition.
 
 Always present, then wait:
 
@@ -27,7 +27,7 @@ Always present, then wait:
 - `-o` / `-e` output paths
 - `-D` working directory if it matters
 
-Prior approval is scoped to that one submission — don't carry it forward to the next run. Use AskUserQuestion when there's a real choice to make (partition tier, walltime budget).
+Prior approval is scoped to that one submission — don't carry it forward to the next run. Ask the user when there's a real choice to make (partition tier, walltime budget).
 
 ## Connect
 
@@ -165,7 +165,7 @@ You don't set priority with a flag. The partition's built-in tier decides both s
 | 200 (med) | `*ue`, `i64m512re` | exclusive node, faster scheduling |
 | 300 (high) | `emergency_cpu`, `emergency_gpu`, `emergency_gpua40` | rush, premium rate |
 
-**HARD RULE for Claude: only ever propose low-tier (`*u`) partitions.** Medium (`*ue`) or high (`emergency_*`) are off-limits unless the user *explicitly* names that tier in their instruction for this specific job (e.g. "use `i64m512ue`" or "this is urgent, put it on emergency"). "Faster", "more reliable", "important" do not count as authorization — still propose `*u` and let the user override. This will rarely happen; assume `*u` by default.
+**HARD RULE: only ever propose low-tier (`*u`) partitions.** Medium (`*ue`) or high (`emergency_*`) are off-limits unless the user *explicitly* names that tier in their instruction for this specific job (e.g. "use `i64m512ue`" or "this is urgent, put it on emergency"). "Faster", "more reliable", "important" do not count as authorization — still propose `*u` and let the user override. This will rarely happen; assume `*u` by default.
 
 **Don't add `--qos=…` or `--priority=…`** — this cluster doesn't use them (all QOS priorities are 0).
 
