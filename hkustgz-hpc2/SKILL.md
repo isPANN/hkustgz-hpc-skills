@@ -27,7 +27,7 @@ Always present, then wait:
 - `-o` / `-e` output paths
 - `-D` working directory if it matters
 
-Prior approval is scoped to that one submission — don't carry it forward to the next run. Ask the user when there's a real choice to make (partition tier, walltime budget).
+Prior approval is scoped to that one submission — don't carry it forward to the next run. Use AskUserQuestion when there's a real choice to make (partition tier, walltime budget).
 
 ## Connect
 
