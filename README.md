@@ -7,7 +7,7 @@ Agent skills for working on the HKUST-GZ High Performance Computing clusters. Ea
 | Skill | Description |
 |---|---|
 | [`hkustgz-hpc2`](./hkustgz-hpc2/) | Slurm cheat sheet for the HKUST-GZ HPC **Phase 2** cluster — job submission, partitions, GPU jobs, monitoring, cancellation, walltime sizing, and storage layout. |
-| [`hkustgz-hpc4`](./hkustgz-hpc4/) | HKUST-GZ HPC **Phase 4** routing and operations — Kunpeng CPU Slurm jobs on `hpc` and Ascend 910C NPU containers in AIStudio. |
+| [`hkustgz-hpc4`](./hkustgz-hpc4/) | HKUST-GZ HPC **Phase 4** CPU/NPU Slurm operations — live partition discovery, Ascend 910C resource counts, device mapping, environments, and monitoring. |
 
 Install only the phases your account can access. This keeps unavailable clusters out of the agent's choices. Users with both accounts can install both; the skills then route from the conversation, project, SSH target, and job files.
 

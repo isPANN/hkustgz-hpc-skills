@@ -1,153 +1,111 @@
 ---
 name: hkustgz-hpc4
-description: Operate the HKUST-GZ HPC Phase 4 domestic platform. Use when the request, project, or SSH target concerns `HPC4`/`四期`, `hpc4login.hpc.hkust-gz.edu.cn`, Kunpeng CPU, 910C/A3 NPU, or AIStudio. If this is the user's only installed HKUST-GZ HPC skill, use it for otherwise-unspecified HKUST-GZ cluster work without asking about another phase. Covers CPU Slurm jobs on partition `hpc` and NPU container development.
+description: Operate the HKUST-GZ HPC Phase 4 domestic platform through CPU/NPU Slurm jobs. Use for HPC4/四期, hkustgz-hpc4, hpc4login.hpc.hkust-gz.edu.cn, Kunpeng CPU, and 910C/A3 NPU work. If this is the only installed HKUST-GZ HPC skill, use it for otherwise-unspecified HKUST-GZ cluster work.
 metadata:
-  short-description: Slurm and AIStudio workflows on HKUST-GZ HPC Phase 4
+  short-description: CPU/NPU Slurm workflows on HKUST-GZ HPC Phase 4
 ---
 
 # HKUST-GZ HPC4
 
+## Choose the execution path from live evidence
+
+**HPC4 supports CPU and NPU jobs through Slurm. A container is not required for the verified SSH/Slurm environment.** The scheduler allocates resources; the Python environment supplies software.
+
 Official documentation: https://docs.hpc.hkust-gz.edu.cn/docs/hpc4/domestic/
 
-HPC Phase 4 has two distinct execution paths:
+Documentation may describe a different deployment or lag the live cluster. Missing Slurm NPU instructions do not mean NPU Slurm is unavailable. Prefer current scheduler output and verified job behavior for the selected endpoint; do not transfer Phase 2 partition names, CUDA directives, or storage assumptions.
 
-- **Kunpeng CPU work:** SSH to the login node and submit Slurm jobs to partition `hpc`.
-- **Ascend 910C NPU work:** create a container development environment in the web portal's AIStudio. The official Phase 4 guide does not document NPU allocation through Slurm.
+Keep an already established phase/SSH target. If both Phase 2 and Phase 4 skills are installed, inspect the project and SSH context before asking which phase. Use `hkustgz-hpc2` for Phase 2/A800/A40; Phase 1 uses LSF.
 
-Do not reuse Phase 2 partition names, GPU directives, storage paths, or module assumptions.
+## Connect and inspect
 
-## Phase selection
-
-This skill's installation means Phase 4 is available to the user. Do not ask whether they have Phase 2 access. Keep using Phase 4 when it is the only installed HKUST-GZ HPC skill or is already established by the conversation, project, SSH target, job script, partition, or storage path.
-
-When both phase skills are installed:
-
-- Answer cluster-independent Slurm questions without choosing a phase.
-- For phase-specific work, inspect available read-only context first: current hostname, SSH target/config, existing job script, partition, paths, and requested hardware. A new explicit target replaces older context.
-- Ask which cluster the user uses only when a phase-specific action or command still cannot be chosen safely, or when the evidence conflicts. Once answered, retain it for the rest of the conversation.
-
-Generic NPU/Ascend wording alone is not enough to distinguish Phase 2 from Phase 4; 910C/A3 or the Phase 4 AIStudio portal is.
-
-## Confirm before consuming resources
-
-Before `sbatch`, `srun`, or creating an AIStudio environment, show the complete resource request and command, then get explicit approval for that one action.
-
-For Slurm, include:
-
-- partition, walltime, nodes, tasks, CPUs per task, and memory
-- job name, working directory, stdout, and stderr paths
-- modules/environment and actual command
-
-For AIStudio, include:
-
-- image, resource specification, NPU chip count, Pod/node count, mounted model, and intended command
-- both the portal's NPU quantity and the equivalent physical 910C card count
-
-Do not carry approval to a later submission or environment creation.
-
-## Connect
-
-Browser portal:
-
-https://hpc4login.hpc.hkust-gz.edu.cn/#/app/user
-
-SSH login:
+Use the configured `hkustgz-hpc4` SSH alias when available, otherwise:
 
 ```bash
 ssh <username>@hpc4login.hpc.hkust-gz.edu.cn
 ```
 
-Use the login node for editing, inspecting resources, and submitting jobs. Run computation through Slurm or AIStudio.
+Portal: https://hpc4login.hpc.hkust-gz.edu.cn/#/app/user
 
-## Kunpeng CPU: Slurm
-
-The documented domestic CPU cluster has 22 Kunpeng nodes and one partition, `hpc`. Check live availability instead of assuming node state:
+Use the login node for file editing, scheduler inspection, and submission. Run training, evaluation, and compute benchmarks inside an allocation.
 
 ```bash
-sinfo
-module av
-module list
+sinfo -h -o "%P %G"
+scontrol show partition
+squeue -u "$USER"
 ```
 
-Basic job script:
+Observed on this SSH endpoint, rechecked **2026-09-10**:
+
+- CPU partitions: `a128m512u` (default), `a128m512ue`, `emergency`, `debug`.
+- NPU partitions: `a320m2tn910cu`, `a320m2tn910cue`, `emergency_a320m2tn910c`; NPU nodes advertise `npu:16`.
+- Use the ordinary partition appropriate to the task; do not assume emergency/debug partition eligibility.
+- The older documentation's CPU partition `hpc` is not present in this inventory. Discover partitions before submission instead of hard-coding it.
+
+These are dated observations, not permanent cluster guarantees. Query account/QOS limits and current partition availability when choosing resources.
+
+## Resources and authorization
+
+Before submission, make the actual resource request reviewable: partition, account if needed, walltime, nodes, tasks, CPUs, host memory, NPU chips and physical-card equivalent, job name, working directory, output/error paths, environment, and command.
+
+Proceed within the user's existing authorization, including explicitly authorized execution or bounded optimization. Ask only when resource consumption or scope is not already authorized; do not require repeated approval merely because another submission is needed within that scope. `sbatch --test-only` validates a request without allocating resources.
+
+## NPU count and device numbering
+
+The live Slurm submission validator accepts **2, 4, 6, 8, 10, 12, 14, or 16 NPU units per node**; its message directs larger requests to multiple nodes. A one-unit request is rejected. The validator explicitly says:
+
+> NPU 是一卡双芯，提交 2 张卡作业是按 1 张物理卡计费。
+
+Thus `--gres=npu:2` means **two logical chips / one physical 910C card**, not two physical cards. The verified chips each expose about 64 GiB HBM. Do not infer prices, utilization warning thresholds, or quota rules from this count policy; confirm those separately.
+
+Slurm device isolation and the Ascend runtime remap allocated chips to job-local logical indices. In the verified two-chip allocation, physical devices 8 and 9 were exposed as logical `npu:0` and `npu:1`. Passing physical IDs through `ASCEND_RT_VISIBLE_DEVICES=8,9` failed because the runtime accepted indices in `[0,2)`.
+
+For this Slurm environment, leave `ASCEND_RT_VISIBLE_DEVICES` unset and select the job-local index in the application. Verify `torch_npu.npu.device_count()` inside the allocation. Do not equate host `npu-smi` IDs with application indices or copy this mapping assumption to an unverified container.
+
+Requesting two chips does not make training parallel automatically. Use DDP for one distributed run, or separate processes explicitly assigned logical indices 0 and 1 for independent experiments. Choose according to the requested experiment. Do not assume a particular project's `--npu` flag exists in another program.
+
+## Verified Python environment
+
+The following environment ran BF16 PyTorch training and autoregressive evaluation in September 2026:
+
+- Python: `/data/anaconda3/envs/pytorch-npu/bin/python` (3.11.14).
+- PyTorch 2.5.1 and `torch_npu` 2.5.1.post3.
+- CANN environment: `/usr/local/Ascend/ascend-toolkit/set_env.sh` (observed CANN 8.5.0).
+- User home observed at `/data/user/<username>`; verify paths for the current account.
+
+Use the existing compatible NPU environment as the base for a project virtualenv, inspecting installed versions before changing dependencies. A project may need `--system-site-packages` to access the installed torch/torch_npu stack. Avoid replacing the shared environment or installing CUDA wheels over it.
+
+An illustrative two-chip Slurm script (replace the project path and application command; size resources for the actual task):
 
 ```bash
 #!/bin/bash
-#SBATCH --job-name=my_job
-#SBATCH --output=%j.out
-#SBATCH --error=%j.err
+#SBATCH --job-name=npu-train
+#SBATCH --partition=a320m2tn910cu
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=16G
-#SBATCH --time=02:00:00
-#SBATCH --partition=hpc
+#SBATCH --mem=32G
+#SBATCH --gres=npu:2
+#SBATCH --time=04:00:00
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --error=logs/%x-%j.err
 
-module load <software>/<version>
-<command>
+set -e
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+unset ASCEND_RT_VISIBLE_DEVICES
+export OMP_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+cd /absolute/project/path
+# This command must implement the intended use of both allocated chips.
+.venv/bin/python train.py <application arguments>
 ```
 
-All `#SBATCH` directives must appear before the first non-comment command. Verify the requested module with `module av`; do not assume that Phase 2 modules exist on Phase 4.
+Create the log directory before submitting and set the submission working directory explicitly. All `#SBATCH` directives must precede executable commands. For CPU jobs, use a currently available CPU partition and omit the NPU GRES; inspect modules or the installed Python environment as needed.
 
-Submit and manage jobs with standard Slurm commands:
+## Monitor useful work
 
-```bash
-sbatch script.sh
-squeue -u "$USER"
-scancel <jobid>
-sinfo
-```
+Use `squeue`, `sacct`, application progress, and errors together. Inspect `npu-smi info` inside the allocation for the allocated hardware. Distinguish AICore utilization, composite NPU utilization, and HBM occupancy; memory usage alone does not measure useful compute. Measure a time window and distinguish initialization, training, validation, and generation.
 
-Do not add Phase 2 GPU directives such as `--gres=gpu:N`: the Phase 4 Slurm guide documents this path for Kunpeng CPU jobs.
+If utilization is low, measure input preparation, compute, and communication before changing resource counts. Choose parallelism and batch size for the actual workload; do not alter the experimental design merely to raise a utilization metric.
 
-### Persistent interactive development
-
-Keep the interactive allocation inside `tmux` so an SSH disconnect does not kill the shell:
-
-```bash
-tmux new -s debug_session
-srun --job-name=interactive_debug \
-  --nodes=1 \
-  --ntasks=1 \
-  --cpus-per-task=4 \
-  --mem=16G \
-  --time=02:00:00 \
-  --partition=hpc \
-  --pty bash
-```
-
-Detach with `Ctrl-b`, then `d`; reconnect with:
-
-```bash
-tmux attach -t debug_session
-```
-
-## Ascend 910C NPU: AIStudio containers
-
-Use the browser portal, open **AIStudio** (add it from **应用中心** if absent), create a project, then create a development environment.
-
-- Select a compatible container image.
-- Select `NPU` and request an even number of NPU chips.
-- One physical 910C card contains two 910B chips; a portal quantity of 16 means 8 physical 910C cards.
-- Set the resource specification and Pod/node count. The default is one Pod; distributed training may require more.
-- Wait for the environment to show `运行中`, then use its displayed SSH command, Jupyter, or VS Code entry.
-- Verify allocation inside the container with `npu-smi info`.
-- Each reported 910B chip has 64 GB memory.
-
-Use the portal's current image/model list rather than copying a potentially stale name from this skill:
-
-https://docs.hpc.hkust-gz.edu.cn/docs/hpc4/domestic/models-images/
-
-For software or model compatibility, check the maintained lists:
-
-- https://docs.hpc.hkust-gz.edu.cn/docs/hpc4/domestic/adaption-list-software/
-- https://docs.hpc.hkust-gz.edu.cn/docs/hpc4/domestic/adaption-list-model/
-
-## Do not invent undocumented cluster details
-
-The Phase 4 guide does not specify storage mounts, quotas, billing tiers, maximum walltime, CPU cores per node, or Slurm NPU partitions. Inspect live state or ask the user instead of borrowing Phase 2 values.
-
-## When NOT to use this skill
-
-- HPC Phase 2 (`hpc2login`, A800/A40, `i64...` partitions, `/hpc2hdd`, `/hpc2ssd`) — use `hkustgz-hpc2`.
-- HPC Phase 1 (`hpc1login`) — it uses LSF rather than this workflow.
+Do not present an invented utilization percentage as a school policy. Never put credentials in a skill, repository, or logs.
