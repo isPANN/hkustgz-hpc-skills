@@ -106,6 +106,10 @@ Create the log directory before submitting and set the submission working direct
 
 Use `squeue`, `sacct`, application progress, and errors together. Inspect `npu-smi info` inside the allocation for the allocated hardware. Distinguish AICore utilization, composite NPU utilization, and HBM occupancy; memory usage alone does not measure useful compute. Measure a time window and distinguish initialization, training, validation, and generation.
 
-If utilization is low, measure input preparation, compute, and communication before changing resource counts. Choose parallelism and batch size for the actual workload; do not alter the experimental design merely to raise a utilization metric.
+Before submitting a compute job, assess whether the requested CPU/NPU resources are likely to be used effectively, using available workload size, batch size, parallelism, and previous measurements. State uncertainty when there is no measurement; do not invent a utilization estimate. Reassess after startup during representative steady-state work and when the workload changes.
+
+If expected or measured utilization is low, **explicitly tell the user before submission when known, or promptly during execution when discovered**. Report the evidence or uncertainty, the likely bottleneck, and concrete recommendations with tradeoffs: for example, a specific resource reduction, batch-size change, input-pipeline improvement, or parallel execution plan. Explain effects on throughput, resource cost, and experimental semantics where relevant. Do not leave the user with only “utilization is low.”
+
+**Recommendations are not authorization to implement them.** Obtain the user's explicit agreement to the proposed utilization adjustment before changing resource requests, batch size, update count, learning schedule, data processing, parallelism, or starting/restarting jobs for that adjustment. A generic request to train or monitor does not authorize these changes. If the user has already explicitly approved that concrete adjustment, proceed without asking again. Do not silently change the recipe or resource allocation to raise utilization.
 
 Do not present an invented utilization percentage as a school policy. Never put credentials in a skill, repository, or logs.
