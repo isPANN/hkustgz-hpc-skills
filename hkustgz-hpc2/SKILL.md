@@ -1,6 +1,6 @@
 ---
 name: hkustgz-hpc2
-description: Operate the HKUST-GZ HPC Phase 2 Slurm cluster. Use when the request, project, or SSH target concerns `HPC2`/`二期`, `hkustgz-hpc2`, `hpc2login.hpc.hkust-gz.edu.cn`, A800/A40, `/hpc2hdd`, or `i64...` partitions. If this is the user's only installed HKUST-GZ HPC skill, use it for otherwise-unspecified HKUST-GZ cluster work without asking about another phase. Covers job submission, monitoring, cancellation, and storage.
+description: Operate the HKUST-GZ HPC Phase 2 Slurm cluster. Use when the request, project, or SSH target concerns `HPC2`/`Phase 2`, `hkustgz-hpc2`, `hpc2login.hpc.hkust-gz.edu.cn`, A800/A40, `/hpc2hdd`, or `i64...` partitions. If this is the user's only installed HKUST-GZ HPC skill, use it for otherwise-unspecified HKUST-GZ cluster work without asking about another phase. Covers job submission, monitoring, cancellation, and storage.
 metadata:
   short-description: Slurm job submission & monitoring on the HKUST-GZ HPC Phase 2 cluster
 ---
@@ -21,23 +21,24 @@ When both phase skills are installed:
 - For phase-specific work, inspect available read-only context first: current hostname, SSH target/config, existing job script, partition, paths, and requested hardware. A new explicit target replaces older context.
 - Ask which cluster the user uses only when a phase-specific action or command still cannot be chosen safely, or when the evidence conflicts. Once answered, retain it for the rest of the conversation.
 
-## Rule: confirm every parameter before submitting
+## Confirm parameters before execution
 
-When the user asks you to run something on this cluster, **list every `sbatch`/`srun` parameter and get explicit approval before invoking it.** No silent defaults — applies even on the free `debug` partition.
+Before the first resource allocation for a task, **list all submission parameters and wait for explicit user approval**. A generic request to train, run, or optimize is not approval of submission parameters. This applies to `sbatch`, `srun` or `salloc` requesting a new allocation, including debug jobs, smoke tests, benchmarks, and interactive sessions. Steps within an already approved allocation and task need no additional approval.
 
-Always present, then wait:
+Present the complete plan with no silent resource defaults:
 
-- `-p` partition
-- `-t` walltime
-- `-n` / `-c` CPU count
-- `--mem` memory
-- `--gres=gpu:N` GPU count (+ partition implies type)
-- The actual command(s) to run
-- `module load …` / env activation
-- `-o` / `-e` output paths
-- `-D` working directory if it matters
+- Partition and account if used.
+- Walltime, nodes, tasks (`-n`), CPUs per task (`-c`), and memory.
+- GPU count and type; explicitly state when no GPU is requested.
+- Job name, working directory, and stdout/stderr paths.
+- Module loads, environment activation, relevant environment variables, and complete commands with experiment parameters.
+- All additional scheduler options, including array ranges and concurrency limits when used.
 
-Prior approval is scoped to that one submission — don't carry it forward to the next run. Use AskUserQuestion when there's a real choice to make (partition tier, walltime budget).
+Prepare the script and perform non-allocating checks before presenting the final plan. Read-only inspection and script preparation need no submission approval. Include compute-based validation in the approved plan or confirm it separately before allocating resources.
+
+**Approval belongs to the confirmed task and parameter scope, not to one submission attempt.** When the same task fails, diagnose and repair code, environment, or path errors and resubmit within the approved resource and experiment settings without asking again. Report the repair and retry. If the cause is unclear or the same error persists, diagnose before another attempt; do not blindly loop submissions.
+
+Ask for confirmation again only when resource configuration, walltime, experiment parameters, or task scope would exceed the confirmed plan. Present the concrete changes before proceeding. Explicitly approved groups of submissions or parameter ranges remain authorized within their bounds. Failure recovery does not authorize additional experiments or unapproved optimization changes.
 
 ## Connect
 
@@ -235,7 +236,7 @@ Compute time is billed once the job starts. Burning a 4-hour GPU slot on a typo 
 3. **Right-size walltime and resources.** Easier to extend (portal) or rerun than to overpay. After the first real run, use `sacct -j <jobid> --format=...MaxRSS,Elapsed` to calibrate future jobs.
 4. **Sanity-check the submit script:** `bash -n run.sh` (syntax), confirm output/error dirs exist, confirm `--gres=gpu:N` only on GPU partitions.
 
-This isn't a separate workflow — it's just the default before any non-trivial submission.
+These validation steps follow the confirmation rule above: include their resource requests and commands in the approved plan before running them.
 
 ## Walltime: how to pick `-t`
 

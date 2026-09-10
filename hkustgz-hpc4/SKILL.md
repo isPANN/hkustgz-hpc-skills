@@ -1,6 +1,6 @@
 ---
 name: hkustgz-hpc4
-description: Operate the HKUST-GZ HPC Phase 4 domestic platform through CPU/NPU Slurm jobs. Use for HPC4/四期, hkustgz-hpc4, hpc4login.hpc.hkust-gz.edu.cn, Kunpeng CPU, and 910C/A3 NPU work. If this is the only installed HKUST-GZ HPC skill, use it for otherwise-unspecified HKUST-GZ cluster work.
+description: Operate the HKUST-GZ HPC Phase 4 domestic platform through CPU/NPU Slurm jobs. Use for HPC4/Phase 4, hkustgz-hpc4, hpc4login.hpc.hkust-gz.edu.cn, Kunpeng CPU, and 910C/A3 NPU work. If this is the only installed HKUST-GZ HPC skill, use it for otherwise-unspecified HKUST-GZ cluster work.
 metadata:
   short-description: CPU/NPU Slurm workflows on HKUST-GZ HPC Phase 4
 ---
@@ -16,6 +16,27 @@ Official documentation: https://docs.hpc.hkust-gz.edu.cn/docs/hpc4/domestic/
 Documentation may describe a different deployment or lag the live cluster. Missing Slurm NPU instructions do not mean NPU Slurm is unavailable. Prefer current scheduler output and verified job behavior for the selected endpoint; do not transfer Phase 2 partition names, CUDA directives, or storage assumptions.
 
 Keep an already established phase/SSH target. If both Phase 2 and Phase 4 skills are installed, inspect the project and SSH context before asking which phase. Use `hkustgz-hpc2` for Phase 2/A800/A40; Phase 1 uses LSF.
+
+## Confirm parameters before execution
+
+Before the first resource allocation for a task, **present the complete submission plan and wait for explicit user approval**. A generic request to train, run, or optimize is not approval of submission parameters. This applies to `sbatch`, `srun` or `salloc` requesting a new allocation, including smoke tests, benchmarks, and interactive sessions. Steps inside an already approved allocation do not require another allocation approval when they remain within the approved task.
+
+Present all actual scheduler parameters and execution settings, including:
+
+- Partition; account and QOS if used.
+- Walltime, nodes, tasks, CPUs per task, and host memory.
+- NPU chip count per node and total, with the physical-card equivalent; explicitly state when no NPU is requested.
+- Job name, working directory, and stdout/stderr paths.
+- Environment activation, relevant environment variables, and the complete application command with experiment parameters.
+- Any additional options, including job arrays and concurrency limits when used.
+
+Make resource defaults explicit in the plan. First inspect the environment, prepare the script and log directories, and perform applicable non-allocating checks such as `bash -n` and `sbatch --test-only`; then present the final plan for approval. Read-only inspection and script preparation need no submission approval. Any compute-based validation must be included in the approved plan or confirmed separately before allocating resources.
+
+**Approval belongs to the confirmed task and parameter scope, not to one submission attempt.** If that task fails, diagnose and repair code, environment, or path errors and resubmit within the approved resource and experiment settings without asking again. Report the repair and retry. If the cause is unclear or the same error persists, diagnose before another attempt; do not blindly loop submissions.
+
+Before changing resource configuration, walltime, experiment parameters, or task scope outside the approved plan, present the concrete changes and wait for approval. An explicitly approved group of submissions or bounded parameter range remains authorized within those bounds; do not ask again for settings already explicitly approved. Authorization for failure recovery does not authorize additional experiments or utilization optimizations.
+
+Propose ordinary shared partitions by default. Propose exclusive or emergency partitions only when the user explicitly requests that partition or tier for the task; requests for faster execution alone do not authorize them. Verify eligibility before proposing debug resources.
 
 ## Connect and inspect
 
@@ -44,17 +65,9 @@ Observed on this SSH endpoint, rechecked **2026-09-10**:
 
 These are dated observations, not permanent cluster guarantees. Query account/QOS limits and current partition availability when choosing resources.
 
-## Resources and authorization
-
-Before submission, make the actual resource request reviewable: partition, account if needed, walltime, nodes, tasks, CPUs, host memory, NPU chips and physical-card equivalent, job name, working directory, output/error paths, environment, and command.
-
-Proceed within the user's existing authorization, including explicitly authorized execution or bounded optimization. Ask only when resource consumption or scope is not already authorized; do not require repeated approval merely because another submission is needed within that scope. `sbatch --test-only` validates a request without allocating resources.
-
 ## NPU count and device numbering
 
-The live Slurm submission validator accepts **2, 4, 6, 8, 10, 12, 14, or 16 NPU units per node**; its message directs larger requests to multiple nodes. A one-unit request is rejected. The validator explicitly says:
-
-> NPU 是一卡双芯，提交 2 张卡作业是按 1 张物理卡计费。
+The live Slurm submission validator accepts **2, 4, 6, 8, 10, 12, 14, or 16 NPU units per node**; its message directs larger requests to multiple nodes. A one-unit request is rejected. The validator states that each physical NPU card contains two chips, and a request for two NPU units is billed as one physical card.
 
 Thus `--gres=npu:2` means **two logical chips / one physical 910C card**, not two physical cards. The verified chips each expose about 64 GiB HBM. Do not infer prices, utilization warning thresholds, or quota rules from this count policy; confirm those separately.
 
@@ -110,6 +123,6 @@ Before submitting a compute job, assess whether the requested CPU/NPU resources 
 
 If expected or measured utilization is low, **explicitly tell the user before submission when known, or promptly during execution when discovered**. Report the evidence or uncertainty, the likely bottleneck, and concrete recommendations with tradeoffs: for example, a specific resource reduction, batch-size change, input-pipeline improvement, or parallel execution plan. Explain effects on throughput, resource cost, and experimental semantics where relevant. Do not leave the user with only “utilization is low.”
 
-**Recommendations are not authorization to implement them.** Obtain the user's explicit agreement to the proposed utilization adjustment before changing resource requests, batch size, update count, learning schedule, data processing, parallelism, or starting/restarting jobs for that adjustment. A generic request to train or monitor does not authorize these changes. If the user has already explicitly approved that concrete adjustment, proceed without asking again. Do not silently change the recipe or resource allocation to raise utilization.
+**Recommendations are not authorization to implement them.** Obtain the user's explicit agreement to the proposed utilization adjustment before changing resource requests, batch size, update count, learning schedule, data processing, parallelism, or starting/restarting jobs for that adjustment. A generic request to train or monitor does not authorize these changes. Include the resulting submission parameters in the adjustment proposal, following the confirmation rule above. If the user has already explicitly approved that complete plan, proceed without asking again. Failure recovery within that approved plan retains authorization as described above. Do not silently change the recipe or resource allocation to raise utilization.
 
 Do not present an invented utilization percentage as a school policy. Never put credentials in a skill, repository, or logs.
